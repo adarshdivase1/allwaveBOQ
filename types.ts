@@ -59,6 +59,11 @@ export interface ClientDetails {
     projectName: string;
     preparedBy: string;
     date: string;
+    designEngineer: string;
+    accountManager: string;
+    keyClientPersonnel: string;
+    location: string;
+    keyComments: string;
 }
 
 export interface Room {

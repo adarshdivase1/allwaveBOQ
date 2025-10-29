@@ -25,6 +25,11 @@ const App: React.FC = () => {
     projectName: '',
     preparedBy: '',
     date: new Date().toISOString().split('T')[0],
+    designEngineer: '',
+    accountManager: '',
+    keyClientPersonnel: '',
+    location: '',
+    keyComments: '',
   });
 
   const [rooms, setRooms] = useState<Room[]>([]);
