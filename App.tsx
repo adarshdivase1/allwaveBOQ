@@ -6,6 +6,7 @@ import Questionnaire from './components/Questionnaire';
 import BoqDisplay from './components/BoqDisplay';
 import RoomCard from './components/RoomCard';
 import TabButton from './components/TabButton';
+import ConfirmModal from './components/ConfirmModal';
 
 import { Boq, BoqItem, ClientDetails as ClientDetailsType, Room } from './types';
 import { generateBoq, refineBoq } from './services/geminiService';
@@ -31,6 +32,8 @@ const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('details');
   const [isRefining, setIsRefining] = useState(false);
   const [margin, setMargin] = useState<number>(0);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [roomToDelete, setRoomToDelete] = useState<Room | null>(null);
 
   const activeRoom = rooms.find(room => room.id === activeRoomId);
 
@@ -49,12 +52,24 @@ const App: React.FC = () => {
     setActiveTab('rooms');
   };
   
-  const deleteRoom = (id: string) => {
-    const newRooms = rooms.filter(room => room.id !== id);
-    setRooms(newRooms);
-    if (activeRoomId === id) {
-        setActiveRoomId(newRooms.length > 0 ? newRooms[0].id : null);
+  const handleDeleteRequest = (id: string) => {
+    const room = rooms.find(r => r.id === id);
+    if (room) {
+        setRoomToDelete(room);
+        setIsConfirmModalOpen(true);
     }
+  };
+
+  const handleConfirmDelete = () => {
+      if (!roomToDelete) return;
+
+      const newRooms = rooms.filter(room => room.id !== roomToDelete.id);
+      setRooms(newRooms);
+      if (activeRoomId === roomToDelete.id) {
+          setActiveRoomId(newRooms.length > 0 ? newRooms[0].id : null);
+      }
+      setIsConfirmModalOpen(false);
+      setRoomToDelete(null);
   };
   
   const updateRoomName = (id: string, newName: string) => {
@@ -231,7 +246,7 @@ const App: React.FC = () => {
                                 room={room}
                                 isActive={room.id === activeRoomId}
                                 onSelect={setActiveRoomId}
-                                onDelete={deleteRoom}
+                                onDelete={handleDeleteRequest}
                                 onUpdateName={updateRoomName}
                             />
                         ))}
@@ -284,6 +299,22 @@ const App: React.FC = () => {
                 </div>
             )}
         </main>
+        <ConfirmModal
+            isOpen={isConfirmModalOpen}
+            onClose={() => {
+                setIsConfirmModalOpen(false);
+                setRoomToDelete(null);
+            }}
+            onConfirm={handleConfirmDelete}
+            title="Confirm Room Deletion"
+            message={
+                <>
+                    Are you sure you want to delete the room <strong className="font-semibold text-white">{roomToDelete?.name}</strong>?
+                    <br />
+                    This action cannot be undone.
+                </>
+            }
+        />
         </div>
     </AuthGate>
   );

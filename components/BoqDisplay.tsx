@@ -173,7 +173,7 @@ const BoqDisplay: React.FC<BoqDisplayProps> = ({ boq, onRefine, isRefining, onEx
           <table className="min-w-full divide-y divide-slate-700">
             <thead className="bg-slate-900">
               <tr>
-                {['Category', 'Item Description', 'Brand', 'Model', 'Qty', 'Item Margin (%)', 'Final Unit Price', 'Final Total Price', 'Actions'].map(header => (
+                {['Category', 'Item Description', 'Brand', 'Model', 'Qty', 'Unit Price (USD)', 'Item Margin (%)', 'Final Unit Price', 'Final Total Price', 'Actions'].map(header => (
                   <th key={header} scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
                     {header}
                   </th>
@@ -188,6 +188,26 @@ const BoqDisplay: React.FC<BoqDisplayProps> = ({ boq, onRefine, isRefining, onEx
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.brand}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.model}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300 text-center">{item.quantity}</td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="relative">
+                       <span className="absolute inset-y-0 left-0 pl-2 flex items-center pointer-events-none text-slate-400">$</span>
+                       <input
+                        type="number"
+                        className="block w-28 text-sm bg-slate-700 border-slate-600 focus:outline-none focus:ring-blue-500 focus:border-blue-500 rounded-md text-white py-1 pl-5 pr-2"
+                        value={boq[index].unitPrice}
+                        onChange={(e) => {
+                            const newUnitPrice = parseFloat(e.target.value) || 0;
+                            const originalItem = boq[index];
+                            onBoqItemUpdate(index, {
+                                unitPrice: newUnitPrice,
+                                totalPrice: newUnitPrice * originalItem.quantity,
+                            });
+                        }}
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="relative">
                       <input
@@ -211,22 +231,22 @@ const BoqDisplay: React.FC<BoqDisplayProps> = ({ boq, onRefine, isRefining, onEx
             </tbody>
             <tfoot className="bg-slate-900">
                 <tr>
-                    <td colSpan={7} className="px-6 py-3 text-right text-sm font-medium text-slate-300 uppercase">Subtotal</td>
+                    <td colSpan={8} className="px-6 py-3 text-right text-sm font-medium text-slate-300 uppercase">Subtotal</td>
                     <td className="px-6 py-3 text-right text-sm font-semibold text-slate-300">{currencySymbol}{totals.subTotal.toFixed(2)}</td>
                     <td></td>
                 </tr>
                 <tr>
-                    <td colSpan={7} className="px-6 py-3 text-right text-sm font-medium text-slate-300 uppercase">Total Margin</td>
+                    <td colSpan={8} className="px-6 py-3 text-right text-sm font-medium text-slate-300 uppercase">Total Margin</td>
                     <td className="px-6 py-3 text-right text-sm font-semibold text-slate-300">{currencySymbol}{totals.marginAmount.toFixed(2)}</td>
                     <td></td>
                 </tr>
                  <tr>
-                    <td colSpan={7} className="px-6 py-3 text-right text-sm font-medium text-slate-300 uppercase">GST (18%)</td>
+                    <td colSpan={8} className="px-6 py-3 text-right text-sm font-medium text-slate-300 uppercase">GST (18%)</td>
                     <td className="px-6 py-3 text-right text-sm font-semibold text-slate-300">{currencySymbol}{totals.gstAmount.toFixed(2)}</td>
                     <td></td>
                 </tr>
                 <tr className="border-t-2 border-slate-700">
-                    <td colSpan={7} className="px-6 py-3 text-right text-sm font-bold text-white uppercase">Grand Total</td>
+                    <td colSpan={8} className="px-6 py-3 text-right text-sm font-bold text-white uppercase">Grand Total</td>
                     <td className="px-6 py-3 text-right text-sm font-bold text-white">{currencySymbol}{totals.grandTotal.toFixed(2)}</td>
                     <td></td>
                 </tr>
