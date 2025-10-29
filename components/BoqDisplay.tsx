@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Boq, BoqItem, Currency, CURRENCIES, ProductDetails } from '../types';
+import { Boq, BoqItem, Currency, CURRENCIES } from '../types';
 import { getExchangeRates } from '../utils/currency';
-import { fetchProductDetails } from '../services/geminiService';
 
 import CurrencySelector from './CurrencySelector';
 import RefineModal from './RefineModal';
@@ -28,9 +27,7 @@ const BoqDisplay: React.FC<BoqDisplayProps> = ({ boq, onRefine, isRefining, onEx
   const [isWebSearchModalOpen, setIsWebSearchModalOpen] = useState(false);
   const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
 
-  const [productDetails, setProductDetails] = useState<ProductDetails | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<BoqItem | null>(null);
-  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
 
   useEffect(() => {
     const fetchRates = async () => {
@@ -57,21 +54,21 @@ const BoqDisplay: React.FC<BoqDisplayProps> = ({ boq, onRefine, isRefining, onEx
   const grandTotal = useMemo(() => {
     return convertedBoq.reduce((acc, item) => acc + item.totalPrice, 0);
   }, [convertedBoq]);
+  
+  const handleAddProductFromSearch = (productName: string) => {
+    const prompt = `Add one unit of a product matching "${productName}" to the BOQ. Place it in the most relevant category or a 'Miscellaneous' category if unsure. Provide a realistic brand, model, and price. Ensure all prices and the grand total are updated.`;
+    onRefine(prompt);
+    setIsWebSearchModalOpen(false); // Close the modal after initiating the action
+  };
 
-  const handleFetchDetails = async (item: BoqItem) => {
+  const handleFetchDetails = (item: BoqItem) => {
     setSelectedProduct(item);
     setIsWebSearchModalOpen(true);
-    setIsLoadingDetails(true);
-    setProductDetails(null);
-    try {
-      const details = await fetchProductDetails(`${item.brand} ${item.model}`);
-      setProductDetails(details);
-    } catch (error) {
-      console.error("Failed to fetch product details", error);
-      setProductDetails({ imageUrl: '', description: 'Failed to load details.', sources: [] });
-    } finally {
-      setIsLoadingDetails(false);
-    }
+  };
+  
+  const handleOpenWebSearch = () => {
+    setSelectedProduct(null); // No product is pre-selected
+    setIsWebSearchModalOpen(true);
   };
 
   const handleImageClick = (item: BoqItem) => {
@@ -93,8 +90,14 @@ const BoqDisplay: React.FC<BoqDisplayProps> = ({ boq, onRefine, isRefining, onEx
       <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
         <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
           <h2 className="text-2xl font-bold text-white">Generated Bill of Quantities</h2>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <CurrencySelector selectedCurrency={selectedCurrency} onCurrencyChange={setSelectedCurrency} disabled={!exchangeRates} />
+            <button
+                onClick={handleOpenWebSearch}
+                className="inline-flex items-center px-4 py-2 border border-slate-600 text-sm font-medium rounded-md shadow-sm text-slate-200 bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-indigo-500"
+            >
+                <SearchIcon className="h-5 w-5 mr-2" /> Web Search
+            </button>
             <button
                 onClick={() => setIsRefineModalOpen(true)}
                 className="inline-flex items-center px-4 py-2 border border-slate-600 text-sm font-medium rounded-md shadow-sm text-slate-200 bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-indigo-500"
@@ -160,8 +163,8 @@ const BoqDisplay: React.FC<BoqDisplayProps> = ({ boq, onRefine, isRefining, onEx
       <WebSearchModal
         isOpen={isWebSearchModalOpen}
         onClose={() => setIsWebSearchModalOpen(false)}
-        productDetails={isLoadingDetails ? null : productDetails}
-        productName={`${selectedProduct?.brand || ''} ${selectedProduct?.model || ''}`}
+        initialProductName={selectedProduct ? `${selectedProduct.brand} ${selectedProduct.model}` : ''}
+        onAdd={handleAddProductFromSearch}
       />
        {isImagePreviewOpen && selectedProduct && (
         <ImagePreviewModal

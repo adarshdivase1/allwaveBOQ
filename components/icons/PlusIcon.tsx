@@ -1,9 +1,9 @@
 import React from 'react';
 
-const SearchIcon: React.FC<{ className?: string }> = ({ className }) => (
+const PlusIcon: React.FC = () => (
   <svg 
     xmlns="http://www.w3.org/2000/svg" 
-    className={className || "h-4 w-4"}
+    className="h-5 w-5 mr-2" 
     fill="none" 
     viewBox="0 0 24 24" 
     stroke="currentColor" 
@@ -12,9 +12,9 @@ const SearchIcon: React.FC<{ className?: string }> = ({ className }) => (
     <path 
       strokeLinecap="round" 
       strokeLinejoin="round" 
-      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" 
+      d="M12 6v6m0 0v6m0-6h6m-6 0H6" 
     />
   </svg>
 );
 
-export default SearchIcon;
+export default PlusIcon;

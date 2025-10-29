@@ -1,5 +1,3 @@
-
-// FIX: Correcting the import path to be relative to the project structure.
 import type { QuestionnaireSection } from '../types';
 
 export const questionnaire: QuestionnaireSection[] = [
@@ -25,6 +23,16 @@ export const questionnaire: QuestionnaireSection[] = [
       },
       { id: 'dimensions', text: 'What are the approximate room dimensions? (e.g., 8m x 6m)', type: 'text' },
       { id: 'capacity', text: 'How many people will the room typically accommodate?', type: 'number' },
+      {
+        id: 'budgetLevel',
+        text: 'What is the budget level for this room?',
+        type: 'select',
+        options: [
+            { label: 'Mid-Range / Standard (Best balance)', value: 'mid_range' },
+            { label: 'Budget-Friendly (Cost-effective)', value: 'budget_friendly' },
+            { label: 'High-End / Premium (Top-tier performance)', value: 'high_end' },
+        ],
+      },
     ],
   },
   {

@@ -1,6 +1,4 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
-// FIX: Correcting the import path to be a relative path.
 import { Boq, ProductDetails, GroundingSource } from "../types";
 
 // Initialize the Google Gemini AI client
@@ -35,17 +33,43 @@ const boqSchema = {
 export async function generateBoq(requirements: string): Promise<Boq> {
   const model = "gemini-2.5-pro"; // Using a more capable model for complex generation
 
-  const systemInstruction = `You are an expert Audio-Visual system designer. Your task is to generate a detailed Bill of Quantities (BOQ) in JSON format based on the user's requirements.
-  - The BOQ must be a JSON array of objects.
-  - Each object must conform to the provided schema, including category, item description, brand, model, quantity, unit price (USD), and total price (USD).
-  - Use realistic, current, and professional-grade AV equipment brands and models (e.g., Crestron, Shure, Samsung, Barco, Biamp, QSC).
-  - Calculate the totalPrice accurately (quantity * unitPrice).
-  - Ensure all necessary components for a functional system are included (cables, mounts, connectors, etc.).
-  - The output must be ONLY the JSON array, with no other text or markdown.`;
+  const systemInstruction = `You are a world-class, AVIXA CTS-D certified Audio-Visual system designer. Your primary objective is to generate a detailed, logical, and 100% production-ready Bill of Quantities (BOQ) in JSON format. An AV integrator must be able to install a complete, functional system using only the items in this BOQ.
+
+**NON-NEGOTIABLE MANDATES (To be followed for ALL budget levels):**
+
+1.  **AVIXA STANDARDS ARE LAW:**
+    *   **DISCAS for Displays:** Rigorously calculate the *minimum appropriate display size* based on room dimensions and the farthest viewer. The chosen display must meet this minimum.
+    *   **Audio Clarity & Coverage:** Ensure full, intelligible audio coverage for all participants. For any room larger than a small 4-person huddle space, a Digital Signal Processor (DSP) is **mandatory** for echo cancellation and proper audio routing. This is not optional.
+    *   **System Functionality:** The design must be logical and all components compatible.
+
+2.  **SYSTEM COMPLETENESS IS PARAMOUNT:**
+    *   **NO MISSING PARTS:** The BOQ must be exhaustive. Include all major components AND every single necessary ancillary item. This means: mounts, racks, power distribution units (PDUs), all required cables (HDMI, USB, network, speaker), connectors, faceplates, etc. The system must be installable "out-of-the-box" from this list.
+
+**THE BUDGET CONSTRAINT (This guides your component selection, NOT system completeness):**
+
+After satisfying all the non-negotiable mandates above, use the 'budgetLevel' from the user's requirements to guide your component selection. The budget influences the *quality, features, and brand* of the components, not their presence or absence.
+
+*   **'budget_friendly':**
+    *   **Goal:** Achieve all core functionality with maximum cost-effectiveness without sacrificing reliability or completeness.
+    *   **Action:** Select professional-grade but entry-level models. Prioritize robust, wired solutions over expensive wireless ones (e.g., specify cable cubbies with HDMI/USB-C instead of a premium wireless presentation system). Use reliable, cost-effective brands (e.g., ViewSonic, Logitech, Behringer, Atlona, Kramer). **You must still include a cost-effective DSP, proper cabling, and appropriate mounts.** Choose the most affordable versions that reliably perform the required function.
+
+*   **'mid_range' (Default):**
+    *   **Goal:** A balanced solution with industry-standard, reputable equipment.
+    *   **Action:** Use brands known for great performance and features that represent the benchmark for a typical corporate installation (e.g., Samsung, Shure, Biamp, QSC, Crestron, Extron).
+
+*   **'high_end':**
+    *   **Goal:** Top-tier performance, aesthetics, and advanced features.
+    *   **Action:** Use premium, best-in-class brands and models (e.g., Planar, Barco, Meyer Sound, high-end Crestron/AMX series).
+
+**FINAL INSTRUCTIONS:**
+*   Output **ONLY** the valid JSON array. Do not include any other text, explanations, or markdown formatting.
+*   Calculate 'totalPrice' accurately (quantity * unitPrice).
+*   Use realistic, current, professional-grade AV brands and models.
+*   **Final Sanity Check:** Before outputting, ask yourself: "Is this a complete, working system that meets AVIXA standards and could be installed tomorrow by a professional integrator without them needing to add missing core components?"`;
 
   const response = await ai.models.generateContent({
     model: model,
-    contents: `Generate a BOQ for the following requirements: ${requirements}`,
+    contents: `Generate a complete, production-ready BOQ based on the following detailed requirements, adhering to all instructions: ${requirements}`,
     config: {
       systemInstruction,
       responseMimeType: "application/json",
@@ -73,11 +97,12 @@ export async function refineBoq(currentBoq: Boq, refinementPrompt: string): Prom
   const model = "gemini-2.5-pro";
 
   const systemInstruction = `You are an expert Audio-Visual system designer. Your task is to refine an existing Bill of Quantities (BOQ) based on user instructions.
-  - You will be given a BOQ in JSON format and a prompt for changes.
-  - Apply the changes and return the complete, updated BOQ as a JSON array of objects.
-  - The returned BOQ must conform to the provided schema.
-  - Ensure all calculations (totalPrice) are correct in the updated BOQ.
-  - The output must be ONLY the JSON array, with no other text or markdown.`;
+- You will be given a BOQ in JSON format and a prompt for changes.
+- Apply the changes and return the complete, updated BOQ as a JSON array of objects.
+- When adding or changing an item, ensure that any necessary dependent components (e.g., a specific mount for a new display, required cables) are also added or updated to maintain a complete and functional system.
+- The returned BOQ must conform to the provided schema.
+- Ensure all calculations (totalPrice) are correct in the updated BOQ.
+- The output must be ONLY the JSON array, with no other text or markdown.`;
 
   const content = `
     Current BOQ:
@@ -103,7 +128,8 @@ export async function refineBoq(currentBoq: Boq, refinementPrompt: string): Prom
   try {
     const boq = JSON.parse(boqText);
     return boq as Boq;
-  } catch (e) {
+  } catch (e)
+{
     console.error("Failed to parse refined BOQ JSON:", boqText);
     throw new Error("The AI returned an invalid refined BOQ format.");
   }
