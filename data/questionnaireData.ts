@@ -2,7 +2,7 @@ import type { QuestionnaireSection } from '../types';
 
 export const questionnaire: QuestionnaireSection[] = [
   {
-    title: 'Room Details',
+    title: '1. Room Fundamentals',
     questions: [
       {
         id: 'roomType',
@@ -33,10 +33,31 @@ export const questionnaire: QuestionnaireSection[] = [
             { label: 'High-End / Premium (Top-tier performance)', value: 'high_end' },
         ],
       },
+      {
+        id: 'tableShape',
+        text: 'What is the shape of the primary table/seating arrangement?',
+        type: 'select',
+        options: [
+          { label: 'Long Boardroom/Rectangle Table', value: 'boardroom_long' },
+          { label: 'U-Shape', value: 'u_shape' },
+          { label: 'Classroom Style (Rows)', value: 'classroom_rows' },
+          { label: 'Round/Square Table', value: 'round_square' },
+          { label: 'No Table / Open Space', value: 'open_space' },
+        ],
+      },
+      {
+        id: 'aesthetics',
+        text: 'What is the aesthetic requirement for the equipment?',
+        type: 'select',
+        options: [
+            { label: 'Standard (Visible equipment is acceptable)', value: 'standard' },
+            { label: 'Architecturally Integrated (Hide equipment where possible)', value: 'integrated' },
+        ],
+      },
     ],
   },
   {
-    title: 'Display Needs',
+    title: '2. Display System',
     questions: [
       {
         id: 'displayType',
@@ -50,58 +71,147 @@ export const questionnaire: QuestionnaireSection[] = [
         ],
       },
        { id: 'displayResolution', text: 'What resolution is required for the main display?', type: 'select', options: [ {label: "Full HD (1080p)", value: "FHD"}, {label: "4K (UHD)", value: "4K"}] },
+       {
+        id: 'interactiveDisplay',
+        text: 'Is an interactive/touch display required for collaboration?',
+        type: 'select',
+        options: [
+          { label: 'Yes, interactive capability is essential', value: 'yes' },
+          { label: 'No, a standard non-touch display is sufficient', value: 'no' },
+        ],
+      },
     ],
   },
   {
-    title: 'Audio & Conferencing',
+    title: '3. Video Conferencing',
     questions: [
       {
         id: 'conferencing',
         text: 'Will video conferencing be used in this room?',
         type: 'select',
         options: [
-          { label: 'Yes, frequently', value: 'yes' },
-          { label: 'Occasionally', value: 'sometimes' },
-          { label: 'No', value: 'no' },
+          { label: 'Yes, this is a primary function', value: 'primary_vc' },
+          { label: 'Yes, but for occasional use', value: 'occasional_vc' },
+          { label: 'No, this room is for local presentation only', value: 'no_vc' },
         ],
       },
       {
-        id: 'audioNeeds',
-        text: 'What are the primary audio requirements?',
-        type: 'multiple-choice',
+        id: 'vcPlatform',
+        text: 'What is the primary video conferencing platform?',
+        type: 'select',
         options: [
-          { label: 'Clear voice reproduction for meetings (Speech Reinforcement)', value: 'speech' },
-          { label: 'High-quality audio for presentations with video/music', value: 'presentation_audio' },
-          { label: 'Ceiling microphones for clean table space', value: 'ceiling_mics' },
-          { label: 'Tabletop microphones for flexibility', value: 'table_mics' },
+          { label: 'Bring Your Own Device (BYOD) - Users connect laptops', value: 'byod' },
+          { label: 'Dedicated Room System (e.g., Microsoft Teams Room, Zoom Room)', value: 'dedicated_room_system' },
+          { label: 'Not Sure / Both', value: 'flexible_vc' },
+        ],
+      },
+      {
+        id: 'cameraNeeds',
+        text: 'What are the camera requirements for video conferencing?',
+        type: 'select',
+        options: [
+          { label: 'Standard PTZ (Pan-Tilt-Zoom) camera', value: 'ptz_standard' },
+          { label: 'Auto-framing / Speaker Tracking Camera', value: 'speaker_tracking' },
+          { label: 'Multiple cameras for different views', value: 'multi_camera' },
+          { label: 'No camera needed', value: 'no_camera' },
         ],
       },
     ],
   },
   {
-    title: 'Connectivity & Control',
+    title: '4. Audio System',
+    questions: [
+      {
+        id: 'microphoneType',
+        text: 'What type of microphones are preferred for participants?',
+        type: 'multiple-choice',
+        options: [
+          { label: 'Ceiling microphones (for a clean table)', value: 'ceiling_mics' },
+          { label: 'Tabletop microphones (wired or wireless)', value: 'table_mics' },
+          { label: 'Microphone integrated into a soundbar/video bar', value: 'bar_mics' },
+          { label: 'No microphones needed', value: 'no_mics' },
+        ],
+      },
+      {
+        id: 'presenterMicrophone',
+        text: 'Does a presenter need a dedicated microphone?',
+        type: 'multiple-choice',
+        options: [
+          { label: 'Yes, a wireless handheld microphone', value: 'wireless_handheld' },
+          { label: 'Yes, a wireless lavalier/lapel microphone', value: 'wireless_lavalier' },
+          { label: 'Yes, a microphone at a lectern', value: 'lectern_mic' },
+          { label: 'No dedicated presenter mic needed', value: 'no_presenter_mic' },
+        ],
+      },
+      {
+        id: 'audioPlayback',
+        text: 'What are the audio playback requirements?',
+        type: 'select',
+        options: [
+          { label: 'Voice reinforcement only (for calls and speech)', value: 'voice_only' },
+          { label: 'High-quality program audio (for videos, music)', value: 'program_audio' },
+        ],
+      },
+    ],
+  },
+  {
+    title: '5. Connectivity & Control',
     questions: [
       {
         id: 'connectivity',
-        text: 'How will users connect to the system to present?',
+        text: 'How will users connect their devices to present?',
         type: 'multiple-choice',
         options: [
-          { label: 'Wired connection (HDMI)', value: 'hdmi' },
-          { label: 'Wireless presentation (e.g., Barco ClickShare, Crestron AirMedia)', value: 'wireless' },
+          { label: 'Wireless Presentation (e.g., ClickShare, AirMedia)', value: 'wireless' },
+          { label: 'Wired HDMI at the table', value: 'hdmi_table' },
+          { label: 'Wired USB-C at the table (video & power)', value: 'usbc_table' },
+          { label: 'Wired connections at a wall plate', value: 'wall_plate_connections' },
         ],
       },
       {
         id: 'controlSystem',
-        text: 'How should the room be controlled?',
+        text: 'How should the room AV system be controlled?',
         type: 'select',
         options: [
-          { label: 'Simple remote control', value: 'remote' },
-          { label: 'Tabletop touch panel', value: 'touch_panel' },
-          { label: 'Wall-mounted keypad', value: 'keypad' },
+          { label: 'Simple remote or auto-source switching', value: 'remote' },
+          { label: 'Wall-mounted keypad for basic functions', value: 'keypad' },
+          { label: 'Tabletop touch panel for full control', value: 'touch_panel' },
           { label: 'No centralized control needed', value: 'none' },
         ],
       },
-      { id: 'other', text: 'Are there any other specific requirements or features needed?', type: 'text' },
+    ],
+  },
+  {
+    title: '6. Additional Features',
+    questions: [
+        {
+          id: 'roomScheduling',
+          text: 'Is a room scheduling panel required outside the room?',
+          type: 'select',
+          options: [
+            { label: 'Yes, a scheduling panel is needed', value: 'yes' },
+            { label: 'No, not required', value: 'no' },
+          ],
+        },
+        {
+          id: 'lectureCapture',
+          text: 'Is there a requirement to record or stream meetings?',
+          type: 'select',
+          options: [
+            { label: 'Yes, recording and/or streaming is needed', value: 'yes' },
+            { label: 'No, not required', value: 'no' },
+          ],
+        },
+        {
+          id: 'assistedListening',
+          text: 'Is an Assisted Listening System (ALS) required for accessibility?',
+          type: 'select',
+          options: [
+            { label: 'Yes, an ALS is required', value: 'yes' },
+            { label: 'No, not required', value: 'no' },
+          ],
+        },
+        { id: 'other', text: 'Are there any other specific requirements?', type: 'text' },
     ],
   },
 ];

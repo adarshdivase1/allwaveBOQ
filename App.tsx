@@ -7,12 +7,14 @@ import BoqDisplay from './components/BoqDisplay';
 import RoomCard from './components/RoomCard';
 import TabButton from './components/TabButton';
 
-import { Boq, ClientDetails as ClientDetailsType, Room } from './types';
+import { Boq, BoqItem, ClientDetails as ClientDetailsType, Room } from './types';
 import { generateBoq, refineBoq } from './services/geminiService';
 import { exportToXlsx } from './utils/exportToXlsx';
 import SparklesIcon from './components/icons/SparklesIcon';
 import AuthGate from './components/AuthGate';
 import LoaderIcon from './components/icons/LoaderIcon';
+import SaveIcon from './components/icons/SaveIcon';
+import LoadIcon from './components/icons/LoadIcon';
 
 type ActiveTab = 'details' | 'rooms';
 
@@ -28,6 +30,7 @@ const App: React.FC = () => {
   const [activeRoomId, setActiveRoomId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<ActiveTab>('details');
   const [isRefining, setIsRefining] = useState(false);
+  const [margin, setMargin] = useState<number>(0);
 
   const activeRoom = rooms.find(room => room.id === activeRoomId);
 
@@ -115,21 +118,81 @@ const App: React.FC = () => {
         setIsRefining(false);
     }
   };
+
+  const handleBoqItemUpdate = (itemIndex: number, updatedValues: Partial<BoqItem>) => {
+    if (!activeRoomId) return;
+    setRooms(prevRooms =>
+      prevRooms.map(room => {
+        if (room.id === activeRoomId && room.boq) {
+          const newBoq = [...room.boq];
+          // Ensure the update doesn't result in a negative margin
+          if (updatedValues.margin !== undefined && updatedValues.margin < 0) {
+            updatedValues.margin = 0;
+          }
+          newBoq[itemIndex] = { ...newBoq[itemIndex], ...updatedValues };
+          return { ...room, boq: newBoq };
+        }
+        return room;
+      })
+    );
+  };
   
   const handleExport = () => {
     if(rooms.some(r => r.boq !== null)) {
-      exportToXlsx(rooms, clientDetails);
+      exportToXlsx(rooms, clientDetails, margin);
     } else {
       alert("Please generate at least one BOQ before exporting.");
     }
   };
+
+  const handleSaveProject = () => {
+    try {
+      const projectState = {
+        clientDetails,
+        rooms,
+        margin,
+      };
+      localStorage.setItem('genboq_project', JSON.stringify(projectState));
+      alert('Project saved successfully!');
+    } catch (error) {
+      console.error('Failed to save project:', error);
+      alert('Error saving project. See console for details.');
+    }
+  };
+
+  const handleLoadProject = () => {
+    if (window.confirm('Are you sure you want to load a project? Any unsaved changes will be lost.')) {
+      try {
+        const savedStateJSON = localStorage.getItem('genboq_project');
+        if (savedStateJSON) {
+          const savedState = JSON.parse(savedStateJSON);
+          if (savedState.clientDetails && Array.isArray(savedState.rooms)) {
+            setClientDetails(savedState.clientDetails);
+            setRooms(savedState.rooms);
+            setMargin(savedState.margin || 0);
+            setActiveRoomId(savedState.rooms.length > 0 ? savedState.rooms[0].id : null);
+            setActiveTab('details');
+            alert('Project loaded successfully!');
+          } else {
+            throw new Error('Invalid project data format.');
+          }
+        } else {
+          alert('No saved project found.');
+        }
+      } catch (error) {
+        console.error('Failed to load project:', error);
+        alert('Error loading project. The saved data might be corrupted.');
+      }
+    }
+  };
+
 
   return (
     <AuthGate>
         <div className="bg-slate-900 text-slate-200 min-h-screen">
         <Header />
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="border-b border-slate-700 mb-6">
+            <div className="flex flex-col sm:flex-row justify-between items-center border-b border-slate-700 mb-6 gap-4">
                 <nav className="-mb-px flex space-x-8" aria-label="Tabs">
                     <TabButton isActive={activeTab === 'details'} onClick={() => setActiveTab('details')}>
                         Project Details
@@ -138,6 +201,20 @@ const App: React.FC = () => {
                         Rooms & BOQs
                     </TabButton>
                 </nav>
+                <div className="flex items-center gap-4 py-2 sm:py-0">
+                    <button
+                        onClick={handleSaveProject}
+                        className="inline-flex items-center px-4 py-2 border border-slate-600 text-sm font-medium rounded-md shadow-sm text-slate-200 bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-blue-500"
+                    >
+                       <SaveIcon /> Save Project
+                    </button>
+                    <button
+                        onClick={handleLoadProject}
+                        className="inline-flex items-center px-4 py-2 border border-slate-600 text-sm font-medium rounded-md shadow-sm text-slate-200 bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-blue-500"
+                    >
+                        <LoadIcon /> Load Project
+                    </button>
+                </div>
             </div>
 
             {activeTab === 'details' && (
@@ -170,7 +247,11 @@ const App: React.FC = () => {
                                     <h2 className="text-xl font-semibold text-white mb-4">
                                         Room Configuration: <span className="text-blue-400">{activeRoom.name}</span>
                                     </h2>
-                                    <Questionnaire onAnswersChange={handleAnswersChange} key={activeRoom.id} />
+                                    <Questionnaire 
+                                        onAnswersChange={handleAnswersChange} 
+                                        key={activeRoom.id}
+                                        initialAnswers={activeRoom.answers}
+                                    />
                                      <div className="mt-6 flex justify-end">
                                         <button
                                           onClick={handleGenerateBoq}
@@ -187,6 +268,9 @@ const App: React.FC = () => {
                                         onRefine={handleRefineBoq} 
                                         isRefining={isRefining}
                                         onExport={handleExport}
+                                        margin={margin}
+                                        onMarginChange={setMargin}
+                                        onBoqItemUpdate={handleBoqItemUpdate}
                                     />
                                 )}
                             </div>

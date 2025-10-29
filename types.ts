@@ -6,6 +6,7 @@ export interface BoqItem {
   quantity: number;
   unitPrice: number;
   totalPrice: number;
+  margin?: number;
 }
 
 export type Boq = BoqItem[];

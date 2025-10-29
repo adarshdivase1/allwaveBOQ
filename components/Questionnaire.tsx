@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { questionnaire } from '../data/questionnaireData';
 // FIX: Correcting the import path to be a relative path.
@@ -6,10 +5,11 @@ import { Question } from '../types';
 
 interface QuestionnaireProps {
   onAnswersChange: (answers: Record<string, any>) => void;
+  initialAnswers: Record<string, any>;
 }
 
-const Questionnaire: React.FC<QuestionnaireProps> = ({ onAnswersChange }) => {
-  const [answers, setAnswers] = useState<Record<string, any>>({});
+const Questionnaire: React.FC<QuestionnaireProps> = ({ onAnswersChange, initialAnswers }) => {
+  const [answers, setAnswers] = useState<Record<string, any>>(initialAnswers);
 
   useEffect(() => {
     onAnswersChange(answers);
@@ -38,6 +38,7 @@ const Questionnaire: React.FC<QuestionnaireProps> = ({ onAnswersChange }) => {
             type={question.type}
             id={question.id}
             name={question.id}
+            value={answers[question.id] || ''}
             onChange={(e) => handleInputChange(question.id, e.target.value)}
             className="mt-1 block w-full bg-slate-700 border border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           />
@@ -47,6 +48,7 @@ const Questionnaire: React.FC<QuestionnaireProps> = ({ onAnswersChange }) => {
           <select
             id={question.id}
             name={question.id}
+            value={answers[question.id] || ''}
             onChange={(e) => handleInputChange(question.id, e.target.value)}
             className="mt-1 block w-full bg-slate-700 border border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           >
