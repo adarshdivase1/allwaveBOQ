@@ -1,5 +1,6 @@
 
 import React from 'react';
+// FIX: Correcting the import path to be relative to the project structure.
 import { CURRENCIES, Currency } from '../types';
 
 interface CurrencySelectorProps {

@@ -1,3 +1,5 @@
+
+// FIX: Correcting the import path to be relative to the project structure.
 import type { QuestionnaireSection } from '../types';
 
 export const questionnaire: QuestionnaireSection[] = [

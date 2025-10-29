@@ -1,105 +1,175 @@
-import React, { useState } from 'react';
-import type { Room, ClientDetails, Currency } from '../types';
-import RoomCard from './RoomCard';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Boq, BoqItem, Currency, CURRENCIES, ProductDetails } from '../types';
+import { getExchangeRates } from '../utils/currency';
+import { fetchProductDetails } from '../services/geminiService';
+
+import CurrencySelector from './CurrencySelector';
 import RefineModal from './RefineModal';
+import WebSearchModal from './WebSearchModal';
+import ImagePreviewModal from './ImagePreviewModal';
+
 import DownloadIcon from './icons/DownloadIcon';
 import WandIcon from './icons/WandIcon';
-import { exportToXlsx } from '../utils/exportToXlsx';
-import { CURRENCIES } from '../types';
+import ImageIcon from './icons/ImageIcon';
+import SearchIcon from './icons/SearchIcon';
+
 
 interface BoqDisplayProps {
-  rooms: Room[];
-  clientDetails: ClientDetails;
-  onBoqUpdate: (updatedRooms: Room[]) => void;
+  boq: Boq;
   onRefine: (refinementPrompt: string) => void;
-  isLoading: boolean;
-  currency: Currency;
-  exchangeRate: number;
+  isRefining: boolean;
+  onExport: () => void;
 }
 
-const BoqDisplay: React.FC<BoqDisplayProps> = ({
-  rooms,
-  clientDetails,
-  onBoqUpdate,
-  onRefine,
-  isLoading,
-  currency,
-  exchangeRate
-}) => {
+const BoqDisplay: React.FC<BoqDisplayProps> = ({ boq, onRefine, isRefining, onExport }) => {
+  const [selectedCurrency, setSelectedCurrency] = useState<Currency>('USD');
+  const [exchangeRates, setExchangeRates] = useState<Record<Currency, number> | null>(null);
   const [isRefineModalOpen, setIsRefineModalOpen] = useState(false);
-  
-  const handleExport = () => {
-    exportToXlsx(rooms, clientDetails, currency, exchangeRate);
-  };
-  
-  const handleRefineSubmit = (prompt: string) => {
-    onRefine(prompt);
-    setIsRefineModalOpen(false);
+  const [isWebSearchModalOpen, setIsWebSearchModalOpen] = useState(false);
+  const [isImagePreviewOpen, setIsImagePreviewOpen] = useState(false);
+
+  const [productDetails, setProductDetails] = useState<ProductDetails | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<BoqItem | null>(null);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+
+  useEffect(() => {
+    const fetchRates = async () => {
+      const rates = await getExchangeRates();
+      setExchangeRates(rates);
+    };
+    fetchRates();
+  }, []);
+
+  const currencySymbol = useMemo(() => {
+    return CURRENCIES.find(c => c.value === selectedCurrency)?.symbol || '$';
+  }, [selectedCurrency]);
+
+  const convertedBoq = useMemo(() => {
+    if (!exchangeRates || !boq) return [];
+    const rate = exchangeRates[selectedCurrency] || 1;
+    return boq.map(item => ({
+      ...item,
+      unitPrice: item.unitPrice * rate,
+      totalPrice: item.totalPrice * rate,
+    }));
+  }, [boq, selectedCurrency, exchangeRates]);
+
+  const grandTotal = useMemo(() => {
+    return convertedBoq.reduce((acc, item) => acc + item.totalPrice, 0);
+  }, [convertedBoq]);
+
+  const handleFetchDetails = async (item: BoqItem) => {
+    setSelectedProduct(item);
+    setIsWebSearchModalOpen(true);
+    setIsLoadingDetails(true);
+    setProductDetails(null);
+    try {
+      const details = await fetchProductDetails(`${item.brand} ${item.model}`);
+      setProductDetails(details);
+    } catch (error) {
+      console.error("Failed to fetch product details", error);
+      setProductDetails({ imageUrl: '', description: 'Failed to load details.', sources: [] });
+    } finally {
+      setIsLoadingDetails(false);
+    }
   };
 
-  const grandTotal = rooms.reduce((total, room) => {
-    const roomTotal = room.boq.reduce((sum, item) => sum + (item.quantity * item.unitPrice), 0);
-    return total + roomTotal;
-  }, 0) * exchangeRate;
+  const handleImageClick = (item: BoqItem) => {
+    setSelectedProduct(item);
+    setIsImagePreviewOpen(true);
+  };
   
-  const currencyInfo = CURRENCIES.find(c => c.value === currency) || CURRENCIES[0];
+  if (!boq || boq.length === 0) {
+    return (
+      <div className="text-center py-12 text-slate-400">
+          <h3 className="text-lg font-semibold">No Bill of Quantities to display.</h3>
+          <p>Please complete the questionnaire to generate a BOQ.</p>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      <div className="bg-slate-800/50 p-6 rounded-lg border border-slate-700">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6 border-b border-slate-700 pb-4">
-          <div>
-            <h2 className="text-2xl font-bold text-white">Generated Bill of Quantities</h2>
-            <p className="text-slate-400 mt-1">Review the items below. You can edit quantities, remove items, or use AI to refine the entire BOQ.</p>
-          </div>
-          <div className="flex-shrink-0 flex items-center gap-x-3">
-             <button
-              onClick={() => setIsRefineModalOpen(true)}
-              disabled={isLoading}
-              className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-indigo-500 disabled:bg-slate-500 disabled:cursor-not-allowed"
+    <>
+      <div className="bg-slate-800 p-6 rounded-lg border border-slate-700">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-4">
+          <h2 className="text-2xl font-bold text-white">Generated Bill of Quantities</h2>
+          <div className="flex items-center gap-4">
+            <CurrencySelector selectedCurrency={selectedCurrency} onCurrencyChange={setSelectedCurrency} disabled={!exchangeRates} />
+            <button
+                onClick={() => setIsRefineModalOpen(true)}
+                className="inline-flex items-center px-4 py-2 border border-slate-600 text-sm font-medium rounded-md shadow-sm text-slate-200 bg-slate-700 hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-indigo-500"
             >
-              <WandIcon />
-              Refine with AI
+                <WandIcon /> Refine with AI
             </button>
             <button
-              onClick={handleExport}
-              disabled={isLoading}
-              className="inline-flex items-center justify-center px-4 py-2 border border-slate-600 text-sm font-medium rounded-md text-slate-300 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-blue-500 disabled:opacity-50"
+                onClick={onExport}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-800 focus:ring-green-500"
             >
-              <DownloadIcon />
-              Export to XLSX
+                <DownloadIcon /> Export
             </button>
           </div>
         </div>
-        
-        <div className="text-right mb-6">
-            <p className="text-slate-400">Project Grand Total (Est.)</p>
-            <p className="text-3xl font-bold text-white">
-                {currencyInfo.label.split(' ')[1]?.replace(/[()]/g, '') || '$'}{grandTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </p>
-        </div>
 
-        <div className="space-y-6">
-          {rooms.map((room) => (
-            <RoomCard
-              key={room.id}
-              room={room}
-              onBoqUpdate={onBoqUpdate}
-              allRooms={rooms}
-              isLoading={isLoading}
-              currency={currency}
-              exchangeRate={exchangeRate}
-            />
-          ))}
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-slate-700">
+            <thead className="bg-slate-900">
+              <tr>
+                {['Category', 'Item Description', 'Brand', 'Model', 'Qty', 'Unit Price', 'Total Price', 'Actions'].map(header => (
+                  <th key={header} scope="col" className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="bg-slate-800 divide-y divide-slate-700">
+              {convertedBoq.map((item, index) => (
+                <tr key={index} className="hover:bg-slate-700/50">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.category}</td>
+                  <td className="px-6 py-4 whitespace-normal text-sm text-slate-300">{item.itemDescription}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.brand}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{item.model}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300 text-center">{item.quantity}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300 text-right">{currencySymbol}{item.unitPrice.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300 text-right font-semibold">{currencySymbol}{item.totalPrice.toFixed(2)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-400 space-x-2 flex items-center">
+                    <button onClick={() => handleImageClick(item)} className="p-1 hover:text-blue-400" title="Preview Image"><ImageIcon /></button>
+                    <button onClick={() => handleFetchDetails(item)} className="p-1 hover:text-green-400" title="Fetch Details"><SearchIcon /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="bg-slate-900">
+                <tr>
+                    <td colSpan={6} className="px-6 py-3 text-right text-sm font-bold text-white uppercase">Grand Total</td>
+                    <td className="px-6 py-3 text-right text-sm font-bold text-white">{currencySymbol}{grandTotal.toFixed(2)}</td>
+                    <td></td>
+                </tr>
+            </tfoot>
+          </table>
         </div>
       </div>
-      <RefineModal 
+      <RefineModal
         isOpen={isRefineModalOpen}
         onClose={() => setIsRefineModalOpen(false)}
-        onSubmit={handleRefineSubmit}
-        isLoading={isLoading}
+        onSubmit={(prompt) => {
+          onRefine(prompt);
+          setIsRefineModalOpen(false);
+        }}
+        isLoading={isRefining}
       />
-    </div>
+      <WebSearchModal
+        isOpen={isWebSearchModalOpen}
+        onClose={() => setIsWebSearchModalOpen(false)}
+        productDetails={isLoadingDetails ? null : productDetails}
+        productName={`${selectedProduct?.brand || ''} ${selectedProduct?.model || ''}`}
+      />
+       {isImagePreviewOpen && selectedProduct && (
+        <ImagePreviewModal
+          imageUrl={`https://source.unsplash.com/800x600/?${encodeURIComponent(selectedProduct.itemDescription)}`}
+          onClose={() => setIsImagePreviewOpen(false)}
+        />
+      )}
+    </>
   );
 };
 

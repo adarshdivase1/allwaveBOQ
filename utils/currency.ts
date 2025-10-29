@@ -1,4 +1,5 @@
 
+// FIX: Correcting the import path to be relative to the project structure.
 import { Currency } from '../types';
 
 // Using a free, no-API-key-required service for exchange rates.
@@ -25,6 +26,7 @@ export const getExchangeRates = async (): Promise<Record<Currency, number>> => {
     const data = await response.json();
     
     const rates: ExchangeRates = data.rates;
+    rates['USD'] = 1; // The API doesn't return the 'from' currency in the rates object
     
     cachedRates = {
         rates,

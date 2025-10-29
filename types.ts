@@ -1,57 +1,70 @@
 export interface BoqItem {
   category: string;
-  itemName: string;
+  itemDescription: string;
   brand: string;
-  modelNumber: string;
-  description: string;
+  model: string;
   quantity: number;
-  unitPrice: number; // Stored in USD from AI
+  unitPrice: number;
+  totalPrice: number;
+}
+
+export type Boq = BoqItem[];
+
+export interface GroundingSource {
+    web?: {
+        uri: string;
+        title: string;
+    };
+    maps?: {
+        uri: string;
+        title: string;
+    };
+}
+
+export interface ProductDetails {
   imageUrl: string;
-  notes: string;
+  description: string;
+  sources: GroundingSource[];
 }
 
-export interface Room {
-  id: string;
-  name: string;
-  requirements: string;
-  boq: BoqItem[];
-}
-
-export interface QuestionnaireOption {
+export interface QuestionOption {
   label: string;
   value: string;
 }
 
-export interface QuestionnaireQuestion {
+export interface Question {
   id: string;
   text: string;
   type: 'text' | 'number' | 'select' | 'multiple-choice';
-  options?: QuestionnaireOption[];
+  options?: QuestionOption[];
 }
 
 export interface QuestionnaireSection {
   title: string;
-  questions: QuestionnaireQuestion[];
-}
-
-export interface ClientDetails {
-  projectName: string;
-  clientName: string;
-  preparedBy: string;
-  date: string;
-  designEngineer: string;
-  accountManager: string;
-  keyClientPersonnel: string;
-  location: string;
-  keyComments: string;
-  budget?: number;
+  questions: Question[];
 }
 
 export type Currency = 'USD' | 'EUR' | 'GBP' | 'INR';
 
-export const CURRENCIES: { label: string; value: Currency }[] = [
-  { label: 'USD ($)', value: 'USD' },
-  { label: 'EUR (€)', value: 'EUR' },
-  { label: 'GBP (£)', value: 'GBP' },
-  { label: 'INR (₹)', value: 'INR' },
+export const CURRENCIES: { label: string; value: Currency; symbol: string }[] = [
+    { label: 'USD - US Dollar', value: 'USD', symbol: '$' },
+    { label: 'EUR - Euro', value: 'EUR', symbol: '€' },
+    { label: 'GBP - British Pound', value: 'GBP', symbol: '£' },
+    { label: 'INR - Indian Rupee', value: 'INR', symbol: '₹' },
 ];
+
+export interface ClientDetails {
+    clientName: string;
+    projectName: string;
+    preparedBy: string;
+    date: string;
+}
+
+export interface Room {
+    id: string;
+    name: string;
+    answers: Record<string, any>;
+    boq: Boq | null;
+    isLoading: boolean;
+    error: string | null;
+}

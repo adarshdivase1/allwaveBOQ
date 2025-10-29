@@ -1,160 +1,167 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
-import type { Room, ClientDetails } from '../types';
+// FIX: Correcting the import path to be a relative path.
+import { Boq, ProductDetails, GroundingSource } from "../types";
 
-// FIX: Initialize the GoogleGenAI client
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-const model = 'gemini-2.5-pro'; // Use a powerful model for this complex task
+// Initialize the Google Gemini AI client
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 
+// Define the schema for a single BOQ item, which will be used by the Gemini model to generate a structured JSON response.
 const boqItemSchema = {
   type: Type.OBJECT,
   properties: {
-    category: { type: Type.STRING, description: 'e.g., Display, Audio, Control, Cabling' },
-    itemName: { type: Type.STRING, description: 'A descriptive name for the item, e.g., 85" 4K UHD Professional Display' },
-    brand: { type: Type.STRING, description: 'Manufacturer of the item, e.g., Samsung, Crestron, Shure' },
-    modelNumber: { type: Type.STRING, description: 'Specific model number of the product' },
-    description: { type: Type.STRING, description: 'Brief technical description of the item and its purpose in the setup.' },
-    quantity: { type: Type.INTEGER, description: 'Number of units required.' },
-    unitPrice: { type: Type.NUMBER, description: 'Estimated price per unit in USD. Provide a realistic market estimate.' },
-    imageUrl: { type: Type.STRING, description: "A relevant, publicly accessible placeholder image URL for the item. Can be from a manufacturer's website or a generic image search result." },
-    notes: { type: Type.STRING, description: 'Any additional notes, e.g., includes mount, requires specific license.' },
+    category: { type: Type.STRING, description: "e.g., Display, Audio, Control" },
+    itemDescription: { type: Type.STRING, description: "A detailed description of the item." },
+    brand: { type: Type.STRING, description: "The manufacturer of the item." },
+    model: { type: Type.STRING, description: "The model number or name of the item." },
+    quantity: { type: Type.INTEGER, description: "The number of units required." },
+    unitPrice: { type: Type.NUMBER, description: "The price of a single unit in USD." },
+    totalPrice: { type: Type.NUMBER, description: "The total price for the quantity, in USD." },
   },
-  required: ['category', 'itemName', 'brand', 'modelNumber', 'description', 'quantity', 'unitPrice']
+  required: ["category", "itemDescription", "brand", "model", "quantity", "unitPrice", "totalPrice"],
 };
 
-const roomSchema = {
-  type: Type.OBJECT,
-  properties: {
-    name: { type: Type.STRING, description: "A descriptive name for the room, e.g., 'Main Boardroom' or 'Huddle Space 1'" },
-    requirements: { type: Type.STRING, description: "A brief summary of the requirements that this BOQ is based on." },
-    boq: {
-      type: Type.ARRAY,
-      items: boqItemSchema,
-      description: "The list of equipment for this room."
-    }
-  },
-  required: ['name', 'requirements', 'boq']
-};
-
-const mainSchema = {
+// Define the schema for the entire Bill of Quantities (BOQ), which is an array of BOQ items.
+const boqSchema = {
   type: Type.ARRAY,
-  description: "An array of room objects, each containing a Bill of Quantities.",
-  items: roomSchema,
+  items: boqItemSchema,
 };
 
+/**
+ * Generates a Bill of Quantities (BOQ) based on user requirements using the Gemini model.
+ * @param requirements - A string describing the project and room requirements.
+ * @returns A promise that resolves to a BOQ object.
+ */
+export async function generateBoq(requirements: string): Promise<Boq> {
+  const model = "gemini-2.5-pro"; // Using a more capable model for complex generation
 
-const parseAndValidateResponse = (responseText: string): Room[] => {
-  try {
-    // The Gemini response for JSON can sometimes have markdown backticks.
-    const cleanedText = responseText.replace(/^```json\s*|```\s*$/g, '').trim();
-    if (!cleanedText) {
-        throw new Error("Received an empty response from the AI.");
-    }
-    const parsed = JSON.parse(cleanedText) as Omit<Room, 'id'>[];
+  const systemInstruction = `You are an expert Audio-Visual system designer. Your task is to generate a detailed Bill of Quantities (BOQ) in JSON format based on the user's requirements.
+  - The BOQ must be a JSON array of objects.
+  - Each object must conform to the provided schema, including category, item description, brand, model, quantity, unit price (USD), and total price (USD).
+  - Use realistic, current, and professional-grade AV equipment brands and models (e.g., Crestron, Shure, Samsung, Barco, Biamp, QSC).
+  - Calculate the totalPrice accurately (quantity * unitPrice).
+  - Ensure all necessary components for a functional system are included (cables, mounts, connectors, etc.).
+  - The output must be ONLY the JSON array, with no other text or markdown.`;
 
-    if (!Array.isArray(parsed)) {
-      throw new Error("AI response is not an array of rooms.");
-    }
-    
-    // Add client-side IDs
-    return parsed.map((room, index) => ({
-        ...room,
-        id: `${room.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${index}-${Date.now()}`,
-        // Ensure boq is an array
-        boq: Array.isArray(room.boq) ? room.boq : []
-    }));
-  } catch (error) {
-    console.error("Failed to parse AI response:", error);
-    console.error("Raw response text:", responseText);
-    throw new Error("The AI returned an invalid response. Please try refining your request.");
-  }
-};
-
-
-export const generateBoqFromRequirements = async (
-  requirements: string,
-  clientDetails: ClientDetails
-): Promise<Room[]> => {
-  const budgetInfo = clientDetails.budget ? `The client has an estimated budget of ${clientDetails.budget} USD. Try to stay within this budget, prioritizing core functionality.` : 'No budget has been specified.';
-
-  const systemInstruction = `You are an expert AV (Audio-Visual) solutions architect. Your task is to generate a detailed Bill of Quantities (BOQ) for AV equipment based on user requirements.
-- Analyze the requirements carefully. If multiple rooms are described, create a separate BOQ for each room.
-- Select appropriate, real-world equipment from well-known professional AV brands (e.g., Crestron, Extron, QSC, Shure, Biamp, Samsung, LG, Barco, Poly, Cisco). Avoid consumer-grade equipment.
-- Include all necessary components for a complete solution, including displays, mounts, microphones, speakers, DSPs, control processors, touch panels, video extenders, switches, cables, and connectors.
-- Provide realistic, estimated unit prices in USD.
-- Structure your response strictly according to the provided JSON schema. Do not add any extra text, explanations, or markdown formatting outside of the JSON structure.`;
-
-  const prompt = `Please generate a BOQ based on these details:
-Client Details:
-- Project Name: ${clientDetails.projectName}
-- Client Name: ${clientDetails.clientName}
-- Location: ${clientDetails.location}
-- ${budgetInfo}
-
-Requirements:
----
-${requirements}
----
-`;
-
-  // FIX: Use ai.models.generateContent instead of deprecated methods
   const response = await ai.models.generateContent({
     model: model,
-    contents: prompt,
+    contents: `Generate a BOQ for the following requirements: ${requirements}`,
     config: {
-        systemInstruction: systemInstruction,
-        responseMimeType: "application/json",
-        responseSchema: mainSchema,
-        temperature: 0.2, // Lower temperature for more predictable, structured output
-    }
+      systemInstruction,
+      responseMimeType: "application/json",
+      responseSchema: boqSchema,
+    },
   });
 
-  // FIX: Correctly access the response text
-  const responseText = response.text;
-  if (!responseText) {
-    throw new Error("Failed to generate BOQ. The AI returned an empty response.");
+  const boqText = response.text.trim();
+  try {
+    const boq = JSON.parse(boqText);
+    return boq as Boq;
+  } catch (e) {
+    console.error("Failed to parse BOQ JSON:", boqText);
+    throw new Error("The AI returned an invalid BOQ format.");
   }
+}
 
-  return parseAndValidateResponse(responseText);
-};
+/**
+ * Refines an existing Bill of Quantities (BOQ) based on a user's prompt.
+ * @param currentBoq - The current BOQ object to be refined.
+ * @param refinementPrompt - A string describing the desired changes to the BOQ.
+ * @returns A promise that resolves to the refined BOQ object.
+ */
+export async function refineBoq(currentBoq: Boq, refinementPrompt: string): Promise<Boq> {
+  const model = "gemini-2.5-pro";
 
-export const refineBoq = async (
-  currentRooms: Room[],
-  refinementPrompt: string
-): Promise<Room[]> => {
-    const systemInstruction = `You are an expert AV (Audio-Visual) solutions architect. Your task is to refine an existing Bill of Quantities (BOQ) based on a user's request.
-- You will be given the current BOQ as a JSON object and a text prompt with refinement instructions.
-- Modify the BOQ according to the instructions. This could involve adding, removing, or changing items, updating quantities, or swapping brands.
-- If the user asks for a more "budget-friendly" option, replace items with lower-cost but still reliable professional-grade alternatives.
-- Ensure the final BOQ is a complete and functional system.
-- Structure your response strictly according to the provided JSON schema. Do not add any extra text, explanations, or markdown formatting outside of the JSON structure.
-- Retain the original 'name' and 'requirements' for each room unless the prompt explicitly asks to change them.`;
-    
-    const prompt = `Here is the current BOQ:
-\`\`\`json
-${JSON.stringify(currentRooms.map(({ id, ...rest }) => rest), null, 2)}
-\`\`\`
+  const systemInstruction = `You are an expert Audio-Visual system designer. Your task is to refine an existing Bill of Quantities (BOQ) based on user instructions.
+  - You will be given a BOQ in JSON format and a prompt for changes.
+  - Apply the changes and return the complete, updated BOQ as a JSON array of objects.
+  - The returned BOQ must conform to the provided schema.
+  - Ensure all calculations (totalPrice) are correct in the updated BOQ.
+  - The output must be ONLY the JSON array, with no other text or markdown.`;
 
-Refinement Request: "${refinementPrompt}"
+  const content = `
+    Current BOQ:
+    ${JSON.stringify(currentBoq, null, 2)}
 
-Please provide the complete, updated BOQ in the specified JSON format.`;
+    Refinement Request:
+    "${refinementPrompt}"
 
-    // FIX: Use ai.models.generateContent for the refinement call
-    const response = await ai.models.generateContent({
-        model: model,
-        contents: prompt,
-        config: {
-            systemInstruction: systemInstruction,
-            responseMimeType: "application/json",
-            responseSchema: mainSchema,
-            temperature: 0.3,
-        }
-    });
-    
-    // FIX: Correctly access the response text
-    const responseText = response.text;
-    if (!responseText) {
-        throw new Error("Failed to refine BOQ. The AI returned an empty response.");
+    Please provide the full, updated BOQ in JSON format.
+  `;
+
+  const response = await ai.models.generateContent({
+    model: model,
+    contents: content,
+    config: {
+      systemInstruction,
+      responseMimeType: "application/json",
+      responseSchema: boqSchema,
+    },
+  });
+  
+  const boqText = response.text.trim();
+  try {
+    const boq = JSON.parse(boqText);
+    return boq as Boq;
+  } catch (e) {
+    console.error("Failed to parse refined BOQ JSON:", boqText);
+    throw new Error("The AI returned an invalid refined BOQ format.");
+  }
+}
+
+
+/**
+ * Fetches product details, including an image, description, and sources, using Google Search grounding.
+ * @param productName - The name of the product to search for.
+ * @returns A promise that resolves to the product details.
+ */
+export async function fetchProductDetails(productName: string): Promise<ProductDetails> {
+  const model = "gemini-2.5-flash";
+
+  const content = `
+    Find information about the product: "${productName}".
+    Provide a public URL for a high-quality image of the product and a brief, one-paragraph technical description.
+    Return the result as a single, minified JSON object with keys "imageUrl" (string) and "description" (string).
+    Do not include any other text, explanations, or markdown formatting. Just the JSON object.
+    Example: {"imageUrl":"https://example.com/image.jpg","description":"This is a product description."}
+  `;
+
+  const response = await ai.models.generateContent({
+    model: model,
+    contents: content,
+    config: {
+      tools: [{ googleSearch: {} }],
+    },
+  });
+
+  const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+  const sources: GroundingSource[] = groundingChunks.map((chunk: any) => ({
+      web: chunk.web ? { uri: chunk.web.uri, title: chunk.web.title } : undefined,
+      maps: chunk.maps ? { uri: chunk.maps.uri, title: chunk.maps.title } : undefined,
+  })).filter((source: GroundingSource) => source.web || source.maps);
+  
+  let productInfo: { imageUrl: string; description: string } = {
+    imageUrl: '',
+    description: 'No details found.'
+  };
+
+  try {
+    const textResponse = response.text.trim();
+    // The response might be wrapped in markdown ```json ... ```, so we need to extract the JSON part.
+    const jsonMatch = textResponse.match(/\{.*\}/s);
+    if (jsonMatch) {
+      productInfo = JSON.parse(jsonMatch[0]);
+    } else {
+        // Fallback for when no JSON is found in a code block
+        productInfo = JSON.parse(textResponse);
     }
-
-    return parseAndValidateResponse(responseText);
-};
+  } catch (e) {
+    console.error("Failed to parse product details JSON:", response.text);
+    // If parsing fails, we still return the sources. The UI can handle missing image/description.
+  }
+  
+  return {
+    ...productInfo,
+    sources: sources,
+  };
+}

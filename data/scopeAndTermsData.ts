@@ -1,21 +1,12 @@
 
-export const scopeAndTerms = {
-    scope: [
-        "Supply of all equipment as specified in the Bill of Quantities.",
-        "Installation and commissioning of the supplied AV equipment.",
-        "Integration of all system components to ensure seamless operation.",
-        "Basic user training upon project completion."
-    ],
-    exclusions: [
-        "Any civil, masonry, or electrical works. This includes conduit laying, core cutting, and providing power outlets.",
-        "Network infrastructure, including cabling, switches, and internet connectivity, which is assumed to be provided by the client.",
-        "Furniture, fixtures, and any items not explicitly mentioned in the Bill of Quantities.",
-        "Annual Maintenance Contract (AMC), which can be quoted separately upon request."
-    ],
-    terms: [
-        "Prices are estimates and subject to change based on final equipment selection and market fluctuations. All prices are exclusive of applicable taxes.",
-        "Payment Terms: 50% advance with purchase order, 40% on material delivery, 10% on project completion and handover.",
-        "Validity: This quotation is valid for 30 days from the date of issue.",
-        "Warranty: All hardware is covered by the respective manufacturer's warranty. A 1-year warranty on installation services is provided."
-    ]
-};
+export const scopeOfWork = `
+The scope of work includes the supply, installation, testing, and commissioning of the Audio-Visual equipment as specified in this Bill of Quantities. It covers all necessary cabling, connectors, and mounting hardware for a fully functional system.
+Any work not explicitly mentioned, such as civil, electrical, or network infrastructure modifications, is excluded from this scope.
+`;
+
+export const termsAndConditions = `
+1. Prices are quoted in USD and are exclusive of any applicable taxes.
+2. Payment Terms: 50% advance, 40% on delivery, 10% on completion.
+3. Warranty: One year comprehensive on-site warranty for all supplied equipment from the date of handover.
+4. Validity: This quotation is valid for 30 days.
+`;
